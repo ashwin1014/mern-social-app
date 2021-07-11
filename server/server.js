@@ -9,6 +9,11 @@ import Cors from 'cors';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import compression from 'compression';
 
+// local imports
+import HttpError from './models/http-error';
+import userRoute from './routes/users';
+import authRoute from './routes/auth';
+
 /*
  * APP CONFIG
 */
@@ -27,11 +32,14 @@ app.use(helmet());
 app.use(morgan('common'));
 app.use(compression());
 
-/*
- * API ENDPOINTS
-*/
+app.use('/api/users', userRoute);
+app.use('/api/auth', authRoute);
 
-app.get('/', (_req, res) => res.status(200).send('Hello'));
+// handle route not found
+app.use(() => {
+  const error = new HttpError('Route not found', 404);
+  throw error;
+});
 
 /*
  * DB CONFIG
