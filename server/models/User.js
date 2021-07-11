@@ -1,24 +1,26 @@
 /* eslint-disable func-names */
 /* eslint-disable no-underscore-dangle */
 import mongoose from 'mongoose';
-// import bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 
 const { Schema } = mongoose;
 
 const UserSchema = new Schema({
   username: {
     type: String,
-    required: true,
+    required: [true, 'Username is required'],
     min: 5,
     max: 20,
     unique: true,
   },
   email: {
     type: String,
-    required: true,
-    min: 5,
+    required: [true, 'Email is required'],
     unique: true,
-    match: /.+@.+\..+/,
+    match: [
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+      'Please provide a valid email',
+    ],
   },
   mobileNumber: {
     type: Number,
@@ -31,7 +33,7 @@ const UserSchema = new Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: [true, 'Password is required'],
     minLength: [6, 'Password should be at least six characters'],
   },
   //   passwordHash: { type: String, required: true },
@@ -59,43 +61,24 @@ const UserSchema = new Schema({
   timestamps: true,
 });
 
-// UserSchema.virtual('password')
-//   .get(function () {
-//     return this._password;
-//   })
-//   .set(async function (value) {
-//     this._password = value;
-//     const salt = await bcrypt.genSalt(10);
-//     this.passwordHash = await bcrypt.hash(value, salt);
-//   });
-
-// UserSchema.virtual('passwordConfirm')
-//   .get(function () {
-//     return this._passwordConfirm;
-//   })
-//   .set(function (value) {
-//     this._passwordConfirm = value;
-//   });
-
-// UserSchema.path('passwordHash').validate(function (val) {
-//   if (this._password || this._passwordConfirm) {
-//     if (!val.check(this._password).min(6)) {
-//       this.invalidate('password', 'must be at least 6 characters.');
-//     }
-//     if (this._password !== this._passwordConfirm) {
-//       this.invalidate('passwordConfirm', 'must match confirmation.');
-//     }
-//   }
-
-//   if (this.isNew && !this._password) {
-//     this.invalidate('password', 'required');
-//   }
-// }, null);
-
 UserSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
   return obj;
 };
+
+UserSchema.methods.matchPassword = async function (password) {
+  const isValid = await bcrypt.compare(password, this.password);
+  return isValid;
+};
+
+UserSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) {
+    next();
+  }
+  const salt = await bcrypt.genSalt(12);
+  const hashedPassword = await bcrypt.hash(this.password, salt);
+  this.password = hashedPassword;
+});
 
 export default mongoose.model('User', UserSchema);

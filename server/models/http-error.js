@@ -1,7 +1,7 @@
 class HttpError extends Error {
   constructor(message, errorCode) {
     super(message); // Adds a message Property
-    this.code = errorCode; // adds a code property
+    this.errorCode = errorCode; // adds a code property
   }
 }
 

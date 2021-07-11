@@ -1,7 +1,6 @@
 /* eslint-disable no-console */
-import dotEnv from 'dotenv';
+// import dotEnv from 'dotenv';
 import express from 'express';
-import mongoose from 'mongoose';
 import chalk from 'chalk';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -10,6 +9,7 @@ import Cors from 'cors';
 import compression from 'compression';
 
 // local imports
+import connectDB from './config/db';
 import HttpError from './models/http-error';
 import userRoute from './routes/users';
 import authRoute from './routes/auth';
@@ -17,11 +17,10 @@ import authRoute from './routes/auth';
 /*
  * APP CONFIG
 */
-dotEnv.config();
+// dotEnv.config();
 
 const app = express();
 const port = process.env.PORT || 8001;
-const { MONGO_URL } = process.env;
 
 /*
  * MIDDLEWARE
@@ -42,18 +41,17 @@ app.use(() => {
 });
 
 /*
- * DB CONFIG
+ * DB CONNECT
 */
-mongoose.connect(MONGO_URL, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  useFindAndModify: false,
-  useCreateIndex: true,
-}, () => {
-  console.log(chalk.blue('Mondo DB Connected successfully'));
-});
+connectDB();
 
 /*
  * LISTENER
 */
-app.listen(port, () => console.log(chalk.blue(`Listening on localhost: ${port}`)));
+const server = app.listen(port, () => console.log(chalk.blue(`Listening on localhost: ${port}`)));
+
+// eslint-disable-next-line no-unused-vars
+process.on('unhandledRejection', (err, promise) => {
+  console.log(chalk.red(`Connection Error: ${err}`));
+  server.close(() => process.exit(1));
+});

@@ -1,8 +1,6 @@
 import { Router } from 'express';
-import bcrypt from 'bcrypt';
 
 import User from '../models/User';
-// import HttpError from '../models/http-error';
 
 const router = Router();
 
@@ -16,7 +14,10 @@ router.post('/register', async (req, res) => {
   try {
     isExisting = await User.findOne({ email });
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({
+      errorCode: 500,
+      errMsg: err.message,
+    });
   }
 
   try {
@@ -25,23 +26,20 @@ router.post('/register', async (req, res) => {
       return;
     }
 
-    // generate hashed password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
     const newUser = new User({
       username,
       email,
-      password: hashedPassword,
+      password,
       mobileNumber,
     });
 
     const user = await newUser.save();
     res.status(200).json(user);
   } catch (err) {
-    // const error = new HttpError('Error registering user', 500);
-    res.status(500).json(err);
-    // next(error);
+    res.status(500).json({
+      errorCode: 500,
+      errMsg: err.message,
+    });
   }
 });
 
@@ -49,22 +47,39 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    res.status(400).json({ errorCode: 400, errMsg: 'email_password_required' });
+  }
+
   try {
-    const existingUser = await User.findOne({ email });
-    const validatePassword = await bcrypt.compare(password, existingUser.password);
+    const existingUser = await User.findOne({ email }).select('+password');
+    // const validatePassword = await bcrypt.compare(password, existingUser.password);
+
+    // if (!existingUser) {
+    //   res.status(404).json({ errorCode: 404, errMsg: 'user_not_found' });
+    //   return;
+    // }
+    // if (!validatePassword) {
+    //   res.status(500).json({ errorCode: 500, errMsg: 'invalid_password' });
+    //   return;
+    // }
 
     if (!existingUser) {
       res.status(404).json({ errorCode: 404, errMsg: 'user_not_found' });
-      return;
     }
-    if (!validatePassword) {
-      res.status(500).json({ errorCode: 500, errMsg: 'invalid_password' });
-      return;
+
+    const isPasswordMatched = await existingUser.matchPassword(password);
+
+    if (!isPasswordMatched) {
+      res.status(500).json({ errorCode: 404, errMsg: 'invalid_password' });
     }
 
     res.status(200).json(existingUser);
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({
+      errorCode: 500,
+      errMsg: err.message,
+    });
   }
 });
 
