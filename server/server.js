@@ -10,9 +10,10 @@ import compression from 'compression';
 
 // local imports
 import connectDB from './config/db';
-import HttpError from './models/http-error';
 import userRoute from './routes/users';
 import authRoute from './routes/auth';
+import postsRoute from './routes/posts';
+import errorHandler from './middleware/error';
 
 /*
  * APP CONFIG
@@ -33,12 +34,10 @@ app.use(compression());
 
 app.use('/api/users', userRoute);
 app.use('/api/auth', authRoute);
+app.use('/api/posts', postsRoute);
 
-// handle route not found
-app.use(() => {
-  const error = new HttpError('Route not found', 404);
-  throw error;
-});
+// Error Handler
+app.use(errorHandler);
 
 /*
  * DB CONNECT

@@ -1,14 +1,20 @@
+/* eslint-disable consistent-return */
 import { Router } from 'express';
 
 import User from '../models/User';
+import HttpError from '../models/http-error';
 
 const router = Router();
 
 // REGISTER
-router.post('/register', async (req, res) => {
+router.post('/register', async (req, res, next) => {
   const {
     username, email, password, mobileNumber,
   } = req.body;
+
+  if (!email || !password || !username) {
+    return next(new HttpError('credentials_missing', 400));
+  }
 
   let isExisting;
   try {
@@ -22,8 +28,7 @@ router.post('/register', async (req, res) => {
 
   try {
     if (isExisting) {
-      res.status(500).json({ errorCode: 500, errMsg: 'email_in_use' });
-      return;
+      return next(new HttpError('email_in_use', 500));
     }
 
     const newUser = new User({
@@ -36,19 +41,16 @@ router.post('/register', async (req, res) => {
     const user = await newUser.save();
     res.status(200).json(user);
   } catch (err) {
-    res.status(500).json({
-      errorCode: 500,
-      errMsg: err.message,
-    });
+    next(err);
   }
 });
 
 // LOGIN
-router.post('/login', async (req, res) => {
+router.post('/login', async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    res.status(400).json({ errorCode: 400, errMsg: 'email_password_required' });
+    return next(new HttpError('credentials_missing', 400));
   }
 
   try {
@@ -65,21 +67,18 @@ router.post('/login', async (req, res) => {
     // }
 
     if (!existingUser) {
-      res.status(404).json({ errorCode: 404, errMsg: 'user_not_found' });
+      return next(new HttpError('user_not_found', 401));
     }
 
     const isPasswordMatched = await existingUser.matchPassword(password);
 
     if (!isPasswordMatched) {
-      res.status(500).json({ errorCode: 404, errMsg: 'invalid_password' });
+      return next(new HttpError('invalid_password', 401));
     }
 
     res.status(200).json(existingUser);
   } catch (err) {
-    res.status(500).json({
-      errorCode: 500,
-      errMsg: err.message,
-    });
+    next(err);
   }
 });
 

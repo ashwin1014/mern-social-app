@@ -57,6 +57,25 @@ const UserSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  desc: {
+    type: String,
+    default: '',
+    max: 100,
+  },
+  city: {
+    type: String,
+    default: '',
+    max: 50,
+  },
+  from: {
+    type: String,
+    default: '',
+    max: 50,
+  },
+  relationShip: {
+    type: Number,
+    enum: [1, 2, 3],
+  },
 }, {
   timestamps: true,
 });
@@ -79,6 +98,7 @@ UserSchema.pre('save', async function (next) {
   const salt = await bcrypt.genSalt(12);
   const hashedPassword = await bcrypt.hash(this.password, salt);
   this.password = hashedPassword;
+  next();
 });
 
 export default mongoose.model('User', UserSchema);
